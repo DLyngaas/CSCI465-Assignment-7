@@ -1,0 +1,83 @@
+       IDENTIFICATION DIVISION.
+      ****************************************************************
+      *                                                              *
+      * PROGRAM NAME:  TBLBUILD - ASSIGNMENT 7                       *
+      *                                                              *
+      * AUTHOR:  DAN LYNGAAS                                         *
+      *                                                              *
+      * FUNCTION:  THIS PROGRAM CREATES A TABLE BASED ON THE INPUT   *
+      *            FILE AND RETURNS THE TABLE TO THE LINKED PROGRAM  *
+      *                                                              *
+      * INPUT:     INPUT-FILE - THE INPUT DATA RECORDS READ IN.      *
+      ****************************************************************
+
+       PROGRAM-ID.    TBLBUILD.
+       AUTHOR.        DAN LYNGAAS.
+       DATE-WRITTEN.  04/20/2020.
+
+       ENVIRONMENT DIVISION.
+
+       INPUT-OUTPUT SECTION.
+
+       FILE-CONTROL.
+
+           SELECT INPUT-FILE ASSIGN TO SORTED.
+
+       DATA DIVISION.
+
+       FILE SECTION.
+
+       FD  INPUT-FILE
+           RECORDING MODE IS F.
+
+       COPY FUNDREC.
+           05  FILLER                  PIC X(41).
+       WORKING-STORAGE SECTION.
+       01  FLAGS.
+           05  EOF-FLAG                PIC X   VALUE 'N'.
+       01  COUNTER.
+           05  FUND-TBL-SUB            PIC S99 BINARY SYNC VALUE 0.
+       LINKAGE SECTION.
+       01  FUND-TABLE.
+           05 TBL-ENTRY-COUNT          PIC  9(5)    BINARY SYNC VALUE 0.
+           05 FUND-ENTRY                   OCCURS 1 TO 999
+                                           DEPENDING ON TBL-ENTRY-COUNT
+                                           ASCENDING KEY IS TBL-FUND-NBR
+                                           INDEXED BY FUND-TBL-NDX.
+             COPY FUNDTBL.
+       PROCEDURE DIVISION USING FUND-TABLE.
+      ******************************************************************
+      *  THIS ROUTINE READS THE FILE AND CALLS A SUBROUTINE TO BUILD   *
+      *  EACH ENTRY OF THE TABLE.                                      *
+      ******************************************************************
+       0000-MAIN.
+           OPEN  INPUT  INPUT-FILE.
+
+           READ INPUT-FILE
+               AT END MOVE 'Y' TO EOF-FLAG
+           END-READ.
+           SET FUND-TBL-NDX TO 1.
+           PERFORM 1000-PROCESS-RECORDS
+                   VARYING FUND-TBL-NDX FROM 1 BY 1
+                   UNTIL EOF-FLAG = 'Y'.
+
+           CLOSE INPUT-FILE.
+           MOVE 0 TO RETURN-CODE.
+           GOBACK.
+
+       0000-EXIT. EXIT.
+      ******************************************************************
+      *  THIS ROUTINE SETS THE VARIABLES FOR THE CURRENT POINT ENTRY   *
+      *  OF THE TABLE.                                                 *
+      ******************************************************************
+       1000-PROCESS-RECORDS.
+           ADD 1 TO TBL-ENTRY-COUNT.
+           MOVE IN-FUND-NBR TO TBL-FUND-NBR(FUND-TBL-NDX).
+           MOVE IN-FUND-NME TO TBL-FUND-NME(FUND-TBL-NDX).
+           MOVE IN-FUND-SHR-PRC TO TBL-FUND-SHR-PRC(FUND-TBL-NDX).
+           MOVE IN-FUND-COMM-PCT TO TBL-FUND-COMM-PCT(FUND-TBL-NDX).
+           READ INPUT-FILE
+               AT END MOVE 'Y' TO EOF-FLAG
+           END-READ.
+
+       1000-EXIT. EXIT.

@@ -1,0 +1,72 @@
+         PRINT  NOGEN                MACRO CALL SUPPRESSION
+**********************************************************************
+*                                                                    *
+* PROGRAM:    CALCFUND - ASSIGNMENT 7                                *
+* AUTHOR:     Dan Lyngaas                                            *
+* DATE:       04/20/2020                                             *
+*                                                                    *
+* FUNCTION:  THIS PROGRAM PROCESS THE INPUTTED PARAMETERS AND RETURNS*
+*            THE CORRESPONDING RESULTS.                              *
+*                                                                    *
+* INPUT:     PARAMETERS FROM THE FILE THAT CALLED THIS               *
+*                                                                    *
+*                                                                    *
+**********************************************************************
+CALCFUND CSECT                       BEGIN CALCFUND
+*
+         STM   14,12,12(13)          SAVE CALLER'S REGS
+         LR    12,15                 SET R12 TO R15
+         USING CALCFUND,12           ESTABLISH R12 AS 1ST BASE REG
+         LA    14,REGS               R14 -> CURRENT SAVE AREA
+         ST    13,4(,14)             SAVE CALLER'S SAVE AREA ADDR
+         ST    14,8(,14)             SAVE CURRENT SAVE AREA ADDR
+         LR    13,14                 R13 -> CURRENT SAVE AREA
+*
+*                      	
+         LM    2,6,0(1)              R2 -> DEPOSIT AMT IN
+*                                    R3 -> SHARE PRICE IN
+*                                    R4 -> SHARE AMOUNT OUT
+*                                    R5 -> COMMISSION PERCENT IN
+*                                    R6 -> COMMISSION AMOUNT OUT
+         ZAP   DEPAMT,0(6,2)
+         ZAP   SHRSAMT,0(3,3)        GRAB EACH PARAMETER
+         ZAP   COMPERC,0(3,5)
+*
+         ZAP   TEMPCOMM(16),DEPAMT   FIND THE COMMISION AMOUNT
+         MP    TEMPCOMM(16),COMPERC(6)
+         ZAP   COMAMT,TEMPCOMM
+
+         SRP   COMAMT(6),(64-5),5    SHIFT AND ROUND COMMISION AMOUNT
+*
+         ZAP   TEMPAMT(9),DEPAMT
+         MP    TEMPAMT,=P'10000'     FIND THE SHARE PRICE
+         DP    TEMPAMT,SHRSAMT
+         ZAP   CLCSHRE,TEMPAMT(6)
+*
+         SRP   CLCSHRE(6),(64-1),5   SHIFT AND ROUND THE SHARE PRICE
+*
+         ZAP   0(6,4),CLCSHRE(6)     SET THE OUTPUT FOR THE SHARE PRICE
+         ZAP   0(6,6),COMAMT         AND THE COMMISSION PRICE
+*
+         SR    15,15                 SET RC TO 0
+         L     13,4(,13)             R13 -> CALLER'S SAVE AREA
+         L     14,12(,13)            RESTORE R14
+         LM    0,12,20(13)           RESTORE R0 THROUGH R12
+*
+         BR    14                    RETURN TO CALLER
+*
+         LTORG                       LTORG TO ORGANIZE LITERALS
+*
+         DC    C'HERE IS THE STORAGE FOR: CALCFUND'
+*
+REGS     DC    18F'0'                MAINREGS FOR STANDARD LINKAGE
+*
+STRGVARS DC    0CL51                 STORAGE FOR VARIABLES
+TEMPAMT  DS    PL9                   TEMPORARY SALES PRICE
+TEMPCOMM DS    PL16                  TEMPORARY COMMISSION AMOUNT
+DEPAMT   DS    PL6                   DEPOSIT AMOUNT
+SHRSAMT  DS    PL3                   SHARE NUMBER
+CLCSHRE  DS    PL6                   CALCULATED SHARE PRICE
+COMPERC  DS    PL6                   COMMISSION PERCENT
+COMAMT   DS    PL6                   CALCULATED COMMISSION AMOUNT
+         END   CALCFUND

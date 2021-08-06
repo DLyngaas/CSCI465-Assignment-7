@@ -1,0 +1,478 @@
+       IDENTIFICATION DIVISION.
+
+      ****************************************************************
+      *                                                              *
+      * PROGRAM NAME:  FNDSALES - ASSIGNMENT 7                       *
+      *                                                              *
+      * AUTHOR:  DAN LYNGAAS                                         *
+      *                                                              *
+      * FUNCTION:  THIS PROGRAM PROCESSES FUNDS FROM BROKERS AND     *
+      *            OUTPUT A TOTAL REPORT OF ALL OF THEM.             *
+      *                                                              *
+      * INPUT:     SALES-FILE - THE INPUT DATA FOR THE SALES OF EACH *
+      *                         BROKER.                              *
+      *                                                              *
+      * OUTPUT:    REPORT-FILE - THE PROCESSED REPORTS WRITTEN OUT.  *
+      *                                                              *
+      ****************************************************************
+
+       PROGRAM-ID.    FNDSALES.
+       AUTHOR.        DAN LYNGAAS.
+       DATE-WRITTEN.  04/20/2020.
+
+       ENVIRONMENT DIVISION.
+
+       INPUT-OUTPUT SECTION.
+
+       FILE-CONTROL.
+
+           SELECT SALES-FILE ASSIGN TO SALES.
+           SELECT REPORT-FILE ASSIGN TO RPRTOUT.
+
+       DATA DIVISION.
+
+       FILE SECTION.
+
+       FD  SALES-FILE
+           RECORDING MODE IS F.
+
+           COPY SALESREC.
+
+       FD  REPORT-FILE
+           RECORDING MODE IS F
+           LABEL RECORDS ARE OMITTED
+           RECORD CONTAINS 132 CHARACTERS
+           DATA RECORD IS REPORT-RECORD.
+
+       01  REPORT-RECORD                    PIC X(132).
+       WORKING-STORAGE SECTION.
+      ****************************************************************
+      *                                                              *
+      *  FIELD:             DESCRIPTION:                             *
+      *                                                              *
+      *  TEMP-CURRENT-YEAR                                           *
+      *  CURRENT-YEAR       THE CURRENT YEAR WHEN THE PROGRAM RUNS   *
+      *                                                              *
+      *  TEMP-CURRENT-MONTH                                          *
+      *  CURRENT-MONTH      THE CURRENT MONTH WHEN THE PROGRAM RUNS  *
+      *                                                              *
+      *  TEMP-CURRENT-DAY                                            *
+      *  CURRENT-DAY        THE CURRENT DAY WHEN THE PROGRAM RUNS    *
+      *                                                              *
+      *  TEMP-CURRENT-HOUR                                           *
+      *  CURRENT-HOUR       THE CURRENT HOUR WHEN THE PROGRAM RUNS   *
+      *                                                              *
+      *  TEMP-CURRENT-MIN                                            *
+      *  CURRENT-MIN        THE CURRENT MINUTE WHEN THE PROGRAM RUNS *
+      *                                                              *
+      *  TEMP-CURRENT-SEC                                            *
+      *  CURRENT-SEC        THE CURRENT MINUTE WHEN THE PROGRAM RUNS *
+      *                                                              *
+      *  TABLEBUILD         THE NAME OF THE TABLE BUILD SUBPROGRAM   *
+      *                                                              *
+      *  FUND-TABLE         THE DEFINITION OF THE FUND TABLE TO LINK *
+      *                                                              *
+      *  FLAGS              END-OF-FILE AND START-OF-FILE FLAGS      *
+      *                                                              *
+      *  COUNTERS           COUNTERS FOR EACH ITEM TO TRACK          *
+      *  SALES-CTR                                                   *
+      *  BRKER-CTR                                                   *
+      *  PAGE-CTR                                                    *
+      *  LINE-CTR                                                    *
+      *                                                              *
+      *  VARIABLES          GENERAL VARIABLES USED IN THE PROGRAM    *
+      *  TOT-DEP-AMT        TOTAL DEPOSIT AMOUNT                     *
+      *  TOT-COM-AMT        TOTAL COMMISION AMOUNT                   *
+      *  CALC-SHR-AMT       CALCULATED NUMBER OF SHARES              *
+      *  CALC-COM-AMT       CALCULATED COMMISION AMOUNT              *
+      *  TEMP-SHR-PRC       PACKED SHARE PRICE INPUT                 *
+      *  TEMP-COMM-PCT      PACKED COMMISION PERCENT INPUT           *
+      *  TEMP-DEP-AMT       PACKED DEPOSIT AMOUNT INPUT              *
+      *                                                              *
+      ****************************************************************
+
+       01  TABLEBUILD                       PIC X(8)   VALUE 'TBLBUILD'.
+       01  FUND-TABLE.
+           05 TBL-ENTRY-COUNT          PIC  9(5)    BINARY SYNC VALUE 0.
+           05 FUND-ENTRY                   OCCURS 1 TO 999
+                                           DEPENDING ON TBL-ENTRY-COUNT
+                                           ASCENDING KEY IS TBL-FUND-NBR
+                                           INDEXED BY FUND-TBL-NDX.
+              COPY FUNDTBL.
+
+       01  FLAGS.
+           05  EOF-FLAG                     PIC X        VALUE 'N'.
+           05  SOF-FLAG                     PIC X        VALUE 'Y'.
+
+       01  COUNTERS.
+           05  SALES-CTR                    PIC 9(3)     PACKED-DECIMAL
+                                                         VALUE 0.
+           05  BRKER-CTR                    PIC 9(3)     PACKED-DECIMAL
+                                                         VALUE 0.
+           05  PAGE-CTR                     PIC 9(2)     PACKED-DECIMAL
+                                                         VALUE 1.
+           05  LINE-CTR                   PIC 9(2) BINARY SYNC VALUE 17.
+
+       01  VARIABLES.
+           05  TOT-DEP-AMT                  PIC S9(9)V99 PACKED-DECIMAL
+                                                         VALUE 0.
+           05  TOT-COM-AMT                  PIC S9(9)V99 PACKED-DECIMAL
+                                                         VALUE 0.
+           05  CALC-SHR-AMT                PIC S9(8)V999 PACKED-DECIMAL.
+           05  CALC-COM-AMT                 PIC S9(9)V99 PACKED-DECIMAL.
+           05  TEMP-SHR-PRC                 PIC S9(3)V99 PACKED-DECIMAL.
+           05  TEMP-COMM-PCT                PIC S9(5)    PACKED-DECIMAL.
+           05  TEMP-DEP-AMT                 PIC S9(8)V99 PACKED-DECIMAL.
+
+       01 TEMP-DATE-TIME.
+           05 TEMP-CURRENT-DATE.
+                15 TEMP-CURRENT-YEAR        PIC  9(4).
+                15 TEMP-CURRENT-MONTH       PIC  9(2).
+                15 TEMP-CURRENT-DAY         PIC  9(2).
+           05 TEMP-CURRENT-TIME.
+                15 TEMP-CURRENT-HOUR        PIC  9(2).
+                15 TEMP-CURRENT-MIN         PIC  9(2).
+                15 TEMP-CURRENT-SEC         PIC  9(2).
+
+       01  HEADER-LINE1.
+           05  CURRENT-MONTH                PIC 9(2).
+           05  FILLER                       PIC X(1)     VALUE '/'.
+           05  CURRENT-DAY                  PIC 9(2).
+           05  FILLER                       PIC X(1)     VALUE '/'.
+           05  CURRENT-YEAR                 PIC 9(4).
+           05  FILLER                       PIC X(42)    VALUE SPACES.
+           05  INSTITUITON-NAME             PIC X(28)
+                                   VALUE 'FEELINGS MUTUAL FUND COMPANY'.
+           05  FILLER                       PIC X(42)    VALUE SPACES.
+           05  FILLER                       PIC X(8)   VALUE 'PAGE:   '.
+           05  OUT-PAGE-CTR                 PIC ZZ.
+
+       01  HEADER-LINE2.
+           05  CURRENT-HOUR                 PIC 9(2).
+           05  FILLER                       PIC X(1)     VALUE ':'.
+           05  CURRENT-MIN                  PIC 9(2).
+           05  FILLER                       PIC X(1)     VALUE ':'.
+           05  CURRENT-SEC                  PIC 9(2).
+           05  FILLER                       PIC X(46)    VALUE SPACES.
+           05  FILLER                       PIC X(23)
+                                        VALUE 'DAILY FUND SALES REPORT'.
+           05  FILLER                       PIC X(55)    VALUE SPACES.
+
+       01  HEADER-LINE3.
+           05  FILLER                       PIC X(52)    VALUE SPACES.
+           05  FILLER                       PIC X(4)     VALUE 'FUND'.
+           05  FILLER                       PIC X(35)    VALUE SPACES.
+           05  FILLER                       PIC X(7)    VALUE 'DEPOSIT'.
+           05  FILLER                       PIC X(24)    VALUE SPACES.
+           05  FILLER                       PIC X(10)
+                                                VALUE 'COMMISSION'.
+
+       01  HEADER-LINE4.
+           05  FILLER                       PIC X(11)
+                                                VALUE 'BRANCH NAME'.
+           05  FILLER                       PIC X(15)    VALUE SPACES.
+           05  FILLER                       PIC X(11)
+                                                VALUE 'BROKER NAME'.
+           05  FILLER                       PIC X(16)    VALUE SPACES.
+           05  FILLER                       PIC X(14)
+                                                VALUE 'NBR  FUND NAME'.
+           05  FILLER                       PIC X(25)    VALUE SPACES.
+           05  FILLER                       PIC X(6)     VALUE 'AMOUNT'.
+           05  FILLER                       PIC X(8)     VALUE SPACES.
+           05  FILLER                       PIC X(11)
+                                                VALUE 'SHARES SOLD'.
+           05  FILLER                       PIC X(9)     VALUE SPACES.
+           05  FILLER                       PIC X(6)     VALUE 'AMOUNT'.
+
+       01  HEADER-LINE5.
+           05  FILLER                       PIC X(25)    VALUE ALL '-'.
+           05  FILLER                       PIC X(1)     VALUE SPACES.
+           05  FILLER                       PIC X(25)    VALUE ALL '-'.
+           05  FILLER                       PIC X(1)     VALUE SPACES.
+           05  FILLER                       PIC X(4)     VALUE ALL '-'.
+           05  FILLER                       PIC X(2)     VALUE SPACES.
+           05  FILLER                       PIC X(25)    VALUE ALL '-'.
+           05  FILLER                       PIC X(1)     VALUE SPACES.
+           05  FILLER                       PIC X(14)    VALUE ALL '-'.
+           05  FILLER                       PIC X(1)     VALUE SPACES.
+           05  FILLER                       PIC X(18)    VALUE ALL '-'.
+           05  FILLER                       PIC X(1)     VALUE SPACES.
+           05  FILLER                       PIC X(14)    VALUE ALL '-'.
+
+       01  SUM-HDR-LINE1.
+           05  FILLER                       PIC X(53)    VALUE SPACES.
+           05  FILLER                       PIC X(25)
+                                      VALUE '***** REPORT TOTALS *****'.
+           05  FILLER                       PIC X(54)    VALUE SPACES.
+       01  SUM-HDR-LINE2.
+           05  FILLER                       PIC X(26)    VALUE SPACES.
+           05  FILLER                       PIC X(7)  VALUE 'BROKERS'.
+           05  FILLER                       PIC X(11)    VALUE SPACES.
+           05  FILLER                       PIC X(15)
+                                                VALUE 'NUMBER OF SALES'.
+           05  FILLER                       PIC X(25)    VALUE SPACES.
+           05  FILLER                       PIC X(14)
+                                                VALUE 'TOTAL DEPOSITS'.
+           05  FILLER                       PIC X(17)    VALUE SPACES.
+           05  FILLER                       PIC X(17)
+                                             VALUE 'TOTAL COMMISSIONS'.
+       01  SUM-HDR-LINE3.
+           05  FILLER                       PIC X(26)    VALUE SPACES.
+           05  FILLER                       PIC X(7)  VALUE ALL '-'.
+           05  FILLER                       PIC X(11) VALUE SPACES.
+           05  FILLER                       PIC X(15) VALUE ALL '-'.
+           05  FILLER                       PIC X(21) VALUE SPACES.
+           05  FILLER                       PIC X(18) VALUE ALL '-'.
+           05  FILLER                       PIC X(16) VALUE SPACES.
+           05  FILLER                       PIC X(18) VALUE ALL '-'.
+
+       01  TOT-DETL-LINE.
+           05  FILLER                       PIC X(30)    VALUE SPACES.
+           05  OUT-TOT-BRKERS               PIC 9(3).
+           05  FILLER                       PIC X(23)    VALUE SPACES.
+           05  OUT-TOT-SALES                PIC 9(3).
+           05  FILLER                       PIC X(20)    VALUE SPACES.
+           05  OUT-TOT-DEP-AMT              PIC $$$$,$$$,$$$,$$9.99.
+           05  FILLER                       PIC X(15)    VALUE SPACES.
+           05  OUT-TOT-COM-AMT              PIC $$$$,$$$,$$$,$$9.99.
+
+       01  AVG-DETL-LINE.
+           05  FILLER                       PIC X(52)    VALUE SPACES.
+           05  FILLER                       PIC X(26)
+                                     VALUE 'AVERAGE DEPOSIT BY BROKER:'.
+           05  FILLER                       PIC X(5)     VALUE SPACES.
+           05  OUT-TOT-AVG-DEP              PIC $$$$,$$$,$$9.99.
+           05  FILLER                       PIC X(34)    VALUE SPACES.
+
+       01  DETAIL-LINE.
+           05  OUT-BRNCH-NME                PIC X(25).
+           05  FILLER                       PIC X(1)     VALUE SPACES.
+           05  OUT-BRKR-NME                 PIC X(25).
+           05  FILLER                       PIC X(2)     VALUE SPACES.
+           05  OUT-FND-NBR                  PIC X(3).
+           05  FILLER                       PIC X(2)     VALUE SPACES.
+           05  OUT-FND-NME                  PIC X(25).
+           05  OUT-DEPOSIT-AMT              PIC $$$$,$$$,$$9.99.
+           05  FILLER                       PIC X(7)     VALUE SPACES.
+           05  OUT-SHARES-SOLD              PIC ZZZ,ZZ9.999.
+           05  FILLER                       PIC X(7)    VALUE '0      '.
+           05  OUT-COMS-AMT                 PIC $$,$$9.99.
+
+
+       PROCEDURE DIVISION.
+
+      ****************************************************************
+      *  THIS IS THE MAIN PARAGRAPH OF THE PROGRAM IT CALLS          *
+      *  SUBROUTINES TO HANDLE THE INITIALIZATION AND PROCESSING OF  *
+      *  THE DATA THEN IT CALLS TO OUTPUT THE TOTAL AND THE AVERAGE  *
+      *  AT THE END. FINALLY IT CLOSES THE INPUT AND OUTPUT AND EXITS*
+      ****************************************************************
+
+       000-PROCESS-FUNDS.
+           MOVE FUNCTION CURRENT-DATE TO TEMP-DATE-TIME.
+
+           PERFORM 100-INTIALIZE.
+           PERFORM 200-PROCESS-RECORDS
+                   UNTIL EOF-FLAG = 'Y'.
+           PERFORM 700-PROCESS-TOTALS.
+
+           CLOSE SALES-FILE
+                 REPORT-FILE.
+           MOVE 0 TO RETURN-CODE.
+           GOBACK.
+
+      ******************************************************************
+      *  THIS ROUTINE INTIALIZES THE HEADERS AND THE DATE AND TIME     *
+      *  INTO THE CORRESPONDING VARIABLES AND OPENS AND PRIMES THE FILE*
+      *  IT ALSO BUILDS THE TABLE OF FUNDS                             *
+      ******************************************************************
+
+       100-INTIALIZE.
+           MOVE TEMP-CURRENT-YEAR TO CURRENT-YEAR.
+           MOVE TEMP-CURRENT-MONTH TO CURRENT-MONTH.
+           MOVE TEMP-CURRENT-DAY TO CURRENT-DAY.
+           MOVE TEMP-CURRENT-HOUR TO CURRENT-HOUR.
+           MOVE TEMP-CURRENT-MIN TO CURRENT-MIN.
+           MOVE TEMP-CURRENT-SEC TO CURRENT-SEC.
+           OPEN  INPUT  SALES-FILE
+                 OUTPUT REPORT-FILE.
+           READ SALES-FILE
+               AT END MOVE 'Y' TO EOF-FLAG
+           END-READ.
+           CALL TABLEBUILD USING FUND-TABLE.
+       100-EXIT. EXIT.
+
+      ******************************************************************
+      *  THIS ROUTINE IS THE PRIMARY PROCESSOR OF THE SALES FILE IT    *
+      *  IT ITERATES THROUGH AND CALLS A SEPERATE ROUTINE TO SEARCH FOR*
+      *  FUNDS ACCORDING TO THE INDEXING NUMBER.                       *
+      ******************************************************************
+
+       200-PROCESS-RECORDS.
+           MOVE SALES-BRANCH-NME TO OUT-BRNCH-NME.
+           MOVE SALES-BROKER-NME TO OUT-BRKR-NME.
+           ADD 1 TO BRKER-CTR.
+           PERFORM 300-PROCESS-FUNDS
+                   VARYING SALE-NDX FROM 1 BY 1
+                   UNTIL SALE-NDX >= 5.
+           READ SALES-FILE
+             AT END MOVE 'Y' TO EOF-FLAG
+           END-READ.
+       200-EXIT. EXIT.
+
+      ******************************************************************
+      *  THIS IS THE MAIN PROCESSOR OF THE FUNDS IT SEARCHES FOR THE   *
+      *  FUND ENTRY IF THE FUND NUMBER IS GREATER THAN 0 AND CALLS TO  *
+      *  OUTPUT THE RESULT OF THE SEARCH ACCORDINGLY.                  *
+      ******************************************************************
+
+       300-PROCESS-FUNDS.
+           IF SALE-FUND-NBR(SALE-NDX) > 0
+               MOVE SALE-DEP-AMT(SALE-NDX) TO OUT-DEPOSIT-AMT
+               COMPUTE TOT-DEP-AMT ROUNDED =
+                       (SALE-DEP-AMT(SALE-NDX) + TOT-DEP-AMT)
+               END-COMPUTE
+               ADD 1 TO SALES-CTR
+               MOVE SALE-FUND-NBR(SALE-NDX) TO OUT-FND-NBR
+               ADD 1 TO LINE-CTR
+               SET FUND-TBL-NDX TO 1
+               SEARCH ALL FUND-ENTRY
+                 AT END
+                    PERFORM 600-PROCESS-N0-MATCH
+               WHEN TBL-FUND-NBR(FUND-TBL-NDX) = SALE-FUND-NBR(SALE-NDX)
+                    PERFORM 500-PROCESS-MATCH
+               END-SEARCH
+           END-IF.
+       300-EXIT. EXIT.
+
+      ******************************************************************
+      *  THIS ROUTINE PRINTS THE HEADERS AFTER ADVANCING THE PAGE IF IT*
+      *  IS NOT THE START OF THE FILE OTHERWISE IT DOES NOT ADVANCE THE*
+      *  PAGE.                                                         *
+      ******************************************************************
+
+       400-PRINT-HEADERS.
+           IF SOF-FLAG = 'Y'
+               MOVE PAGE-CTR TO OUT-PAGE-CTR
+               WRITE REPORT-RECORD
+                     FROM HEADER-LINE1
+                     AFTER 1
+               MOVE 'N' TO SOF-FLAG
+
+           ELSE
+               ADD 1 TO PAGE-CTR
+               MOVE PAGE-CTR TO OUT-PAGE-CTR
+               WRITE REPORT-RECORD
+                     FROM HEADER-LINE1
+                     AFTER PAGE
+           END-IF.
+           WRITE REPORT-RECORD
+                 FROM HEADER-LINE2
+                 AFTER 1.
+           WRITE REPORT-RECORD
+                 FROM HEADER-LINE3
+                 AFTER 2.
+           WRITE REPORT-RECORD
+                 FROM HEADER-LINE4
+                 AFTER 1.
+           WRITE REPORT-RECORD
+                 FROM HEADER-LINE5
+                 AFTER 1.
+       400-EXIT. EXIT.
+
+      ******************************************************************
+      *  THIS ROUTINE PROCESS THE FUNDS ON A MATCH AND CALLS THE       *
+      *  CALCFUND SUBPROGRAM TO PROCESS THE AMOUNTS AND PRINTS THE     *
+      *  RETURN OF THE CALLED SUBPROGRAM.                              *
+      ******************************************************************
+
+       500-PROCESS-MATCH.
+           MOVE TBL-FUND-NME(FUND-TBL-NDX) TO OUT-FND-NME.
+           MOVE TBL-FUND-SHR-PRC(FUND-TBL-NDX) TO TEMP-SHR-PRC.
+           MOVE SALE-DEP-AMT(SALE-NDX) TO TEMP-DEP-AMT.
+           IF SALE-NDX > 1
+                MOVE '                         ' TO OUT-BRKR-NME
+                MOVE '                         ' TO OUT-BRNCH-NME
+           END-IF.
+           IF LINE-CTR >= 17
+           MOVE 0 TO LINE-CTR
+           PERFORM 400-PRINT-HEADERS
+           END-IF.
+           COMPUTE TEMP-COMM-PCT ROUNDED =
+                (TBL-FUND-COMM-PCT(FUND-TBL-NDX) * 100000)
+           END-COMPUTE.
+           CALL 'CALCFUND' USING TEMP-DEP-AMT
+                                 TEMP-SHR-PRC
+                                 CALC-SHR-AMT
+                                 TEMP-COMM-PCT
+                                 CALC-COM-AMT.
+           COMPUTE TOT-COM-AMT ROUNDED =
+                (TOT-COM-AMT + CALC-COM-AMT)
+           END-COMPUTE.
+           MOVE CALC-SHR-AMT TO OUT-SHARES-SOLD.
+           MOVE CALC-COM-AMT TO OUT-COMS-AMT.
+           WRITE REPORT-RECORD
+                FROM DETAIL-LINE
+                AFTER  2.
+       500-EXIT. EXIT.
+
+      ******************************************************************
+      *  THIS ROUTINE PROCESS THE FUNDS ON NO MATCH AND OUTPUTS THE    *
+      *  THE FUND NUMBER NOT FOUND AND SETS THE SHARES AND COMMISION   *
+      *  AMOUNT TO 0 TO PRINT                                          *
+      ******************************************************************
+
+       600-PROCESS-N0-MATCH.
+           MOVE "*** FUND NBR NOT FOUND **" TO OUT-FND-NME.
+           IF SALE-NDX > 1
+                MOVE '                         ' TO OUT-BRKR-NME
+                MOVE '                         ' TO OUT-BRNCH-NME
+           END-IF.
+           IF LINE-CTR >= 17
+                MOVE 0 TO LINE-CTR
+                PERFORM 400-PRINT-HEADERS
+           END-IF.
+           MOVE '0' TO OUT-SHARES-SOLD.
+           MOVE '0' TO OUT-COMS-AMT.
+           WRITE REPORT-RECORD
+                FROM DETAIL-LINE
+                AFTER 2.
+
+       600-EXIT. EXIT.
+
+      ******************************************************************
+      *  THIS ROUTINE PROCESSES THE TOTALS OF EVERYTHING AFTER THE READ*
+      *  OF THE SALES FILES AND OUTPUTS THE TOTALS AND AVERAGES        *
+      ******************************************************************
+
+       700-PROCESS-TOTALS.
+           ADD 1 TO PAGE-CTR.
+           MOVE PAGE-CTR TO OUT-PAGE-CTR
+           WRITE REPORT-RECORD
+                 FROM HEADER-LINE1
+                 AFTER PAGE.
+           WRITE REPORT-RECORD
+                 FROM HEADER-LINE2.
+           WRITE REPORT-RECORD
+                 FROM SUM-HDR-LINE1
+                 AFTER  2.
+           WRITE REPORT-RECORD
+                 FROM SUM-HDR-LINE2
+                 AFTER 2.
+           WRITE REPORT-RECORD
+                 FROM SUM-HDR-LINE3.
+           MOVE BRKER-CTR TO OUT-TOT-BRKERS.
+           MOVE SALES-CTR TO OUT-TOT-SALES.
+           MOVE TOT-DEP-AMT TO OUT-TOT-DEP-AMT.
+           COMPUTE TOT-DEP-AMT ROUNDED =
+                   (TOT-DEP-AMT / BRKER-CTR)
+           END-COMPUTE.
+           MOVE TOT-DEP-AMT TO OUT-TOT-AVG-DEP.
+           MOVE TOT-COM-AMT TO OUT-TOT-COM-AMT.
+           WRITE REPORT-RECORD
+                 FROM TOT-DETL-LINE.
+           WRITE REPORT-RECORD
+                 FROM AVG-DETL-LINE
+                 AFTER 2.
+       700-EXIT. EXIT.
+

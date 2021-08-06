@@ -1,0 +1,170 @@
+//KC03F05A JOB ,'LYNGAAS',MSGCLASS=H                                    00010000
+//*                                                                     00020000
+//************************************************************          00030000
+//*                                                          *          00040000
+//*  CSCI 465   SPRING 2020                                  *          00050000
+//*                                                          *          00060000
+//*  ASSIGNMENT 7       COBOL Tables and Subprograms         *          00070000
+//*                                                          *          00080000
+//*  PROGRAMMER:  DAN LYNGAAS                                *          00090000
+//*                                                          *          00100000
+//*  DUE DATE:  04/20/2020                                   *          00110000
+//*  DUE TIME:  11:59 PM                                     *          00120000
+//*                                                          *          00130000
+//*  In this assignment we are using single and              *
+//*  multi-dimensional tables to process a business day's    *
+//*  worth of broker deposit and sales data and create a     *
+//*  single report for the Feelings Mutual Fund Company.     *
+//************************************************************          00130000
+//*                                                                     00140000
+//**********************************************************
+//*                                                        *
+//* JSTEP01     DFSORT DATA7                               *
+//*                                                        *
+//**********************************************************
+//JSTEP01 EXEC PGM=SORT,PARM='CMP=CLC'
+//*
+//SORTIN DD DSN=KC02322.CSCI465.DATASP20(DATA7),DISP=SHR
+//SORTOUT  DD DSN=&&SORTED,SPACE=(TRK,(1,5)),DISP=(NEW,PASS)
+//*
+//SYSOUT DD SYSOUT=*
+//*
+//SYSIN    DD *
+  SORT FIELDS=(1,3,ZD,A)
+/*
+//*
+//**********************************************************
+//*                                                        *
+//* JSTEP02     COBOL COMPILE FNDSALES                     *
+//*                                                        *
+//**********************************************************
+//JSTEP02 EXEC PGM=IGYCRCTL,PARM=APOST,REGION=0M                        00250000
+//*                                                                     00260000
+//SYSIN DD DSN=KC03F05.CSCI465.ASSIGNS(FNDSALES),                       00270002
+//         DISP=SHR                                                     00280000
+//SYSLIN DD DSN=&&COBOBJ,DISP=(MOD,PASS)                                00290000
+//*                                                                     00300000
+//SYSLIB DD DSN=KC02322.CSCI465.COPYLIB,DISP=SHR
+//SYSPRINT DD SYSOUT=*                                                  00310000
+//*                                                                     00320000
+//SYSUT1 DD SPACE=(CYL,(1,1))                                           00330000
+//SYSUT2 DD SPACE=(CYL,(1,1))                                           00340000
+//SYSUT3 DD SPACE=(CYL,(1,1))                                           00350000
+//SYSUT4 DD SPACE=(CYL,(1,1))                                           00360000
+//SYSUT5 DD SPACE=(CYL,(1,1))                                           00370000
+//SYSUT6 DD SPACE=(CYL,(1,1))                                           00380000
+//SYSUT7 DD SPACE=(CYL,(1,1))                                           00390000
+//SYSUT8 DD SPACE=(CYL,(1,1))                                           00400000
+//SYSUT9 DD SPACE=(CYL,(1,1))                                           00410000
+//SYSUT10 DD SPACE=(CYL,(1,1))                                          00420000
+//SYSUT11 DD SPACE=(CYL,(1,1))                                          00430000
+//SYSUT12 DD SPACE=(CYL,(1,1))                                          00440000
+//SYSUT13 DD SPACE=(CYL,(1,1))                                          00450000
+//SYSUT14 DD SPACE=(CYL,(1,1))                                          00460000
+//SYSUT15 DD SPACE=(CYL,(1,1))                                          00470000
+//*                                                                     00480000
+//SYSMDECK DD DSN=SYSDECK,SPACE=(CYL,(1,1))                             00490000
+//**********************************************************
+//*                                                        *
+//* JSTEP03     ASSEMBLY COMPILE CALCFUND                  *
+//*                                                        *
+//**********************************************************
+//JSTEP03 EXEC PGM=ASMA90,PARM=ASA                                      00150000
+//*                                                                     00160000
+//SYSLIB DD DSN=SYS1.MACLIB,DISP=SHR                                    00260000
+//       DD DSN=KC02322.CSCI465.COPYLIB,DISP=SHR
+//*                                                                     00160000
+//SYSIN DD DSN=KC03F05.CSCI465.ASSIGNS(CALCFUND),                       00170001
+//         DISP=SHR                                                     00180001
+//*                                                                     00260000
+//SYSLIN DD DSN=&&ASMOBJ,SPACE=(3040,(40,40),,,ROUND),                  00260000
+//          DISP=(MOD,PASS)                                             00290001
+//*                                                                     00300001
+//SYSPRINT DD SYSOUT=*                                                  00310001
+//*                                                                     00320001
+//SYSUT1 DD SPACE=(16384,(120,120),,,ROUND)                             00330001
+//*                                                                     00480001
+//**********************************************************
+//*                                                        *
+//* JSTEP04   LINK FNDSALES AND CALCFUND                   *
+//*                                                        *
+//**********************************************************
+//JSTEP04 EXEC PGM=HEWL,COND=(0,NE)                                     00500001
+//*                                                                     00510001
+//SYSLIN DD DSN=&&COBOBJ,DISP=(MOD,PASS)                                00520001
+//       DD DSN=&&ASMOBJ,DISP=(MOD,PASS)
+//*                                                                     00530001
+//SYSLMOD DD DSN=KC03F05.CSCI465.LOADLIB(FNDSALES),                     00540002
+//           SPACE=(1024,(50,20,1)),DSNTYPE=LIBRARY,                    00550002
+//           DISP=(MOD,KEEP,KEEP)                                       00560002
+//*                                                                     00570001
+//SYSLIB DD DSN=CEE.SCEELKED,DISP=SHR                                   00580001
+//       DD DSN=KC02322.CSCI465.COPYLIB,DISP=SHR
+//*                                                                     00590001
+//SYSPRINT DD SYSOUT=*                                                  00600001
+//*                                                                     00610001
+//**********************************************************
+//*                                                        *
+//* JSTEP05     COBOL COMPILE TBLBUILD                     *
+//*                                                        *
+//**********************************************************
+//JSTEP05 EXEC PGM=IGYCRCTL,PARM=APOST,REGION=0M                        00250000
+//*                                                                     00260000
+//SYSIN DD DSN=KC03F05.CSCI465.ASSIGNS(TBLBUILD),                       00270002
+//         DISP=SHR                                                     00280000
+//*
+//SYSLIN DD DSN=&&OBJMOD,DISP=(MOD,PASS)                                00290000
+//*
+//*                                                                     00300000
+//SYSPRINT DD SYSOUT=*                                                  00310000
+//SYSLIB DD DSN=KC02322.CSCI465.COPYLIB,DISP=SHR                        00320000
+//SYSUT1 DD SPACE=(CYL,(1,1))                                           00330000
+//SYSUT2 DD SPACE=(CYL,(1,1))                                           00340000
+//SYSUT3 DD SPACE=(CYL,(1,1))                                           00350000
+//SYSUT4 DD SPACE=(CYL,(1,1))                                           00360000
+//SYSUT5 DD SPACE=(CYL,(1,1))                                           00370000
+//SYSUT6 DD SPACE=(CYL,(1,1))                                           00380000
+//SYSUT7 DD SPACE=(CYL,(1,1))                                           00390000
+//SYSUT8 DD SPACE=(CYL,(1,1))                                           00400000
+//SYSUT9 DD SPACE=(CYL,(1,1))                                           00410000
+//SYSUT10 DD SPACE=(CYL,(1,1))                                          00420000
+//SYSUT11 DD SPACE=(CYL,(1,1))                                          00430000
+//SYSUT12 DD SPACE=(CYL,(1,1))                                          00440000
+//SYSUT13 DD SPACE=(CYL,(1,1))                                          00450000
+//SYSUT14 DD SPACE=(CYL,(1,1))                                          00460000
+//SYSUT15 DD SPACE=(CYL,(1,1))                                          00470000
+//*                                                                     00480000
+//SYSMDECK DD DSN=SYSDECK,SPACE=(CYL,(1,1))
+//**********************************************************
+//*                                                        *
+//* JSTEP06     LINK TBLBUILD                              *
+//*                                                        *
+//**********************************************************
+//JSTEP06 EXEC PGM=HEWL,COND=(0,NE)                                     00500001
+//*                                                                     00510001
+//SYSLIN DD DSN=&&OBJMOD,DISP=(MOD,PASS)                                00520001
+//*                                                                     00530001
+//SYSLMOD DD DSN=KC03F05.CSCI465.LOADLIB(TBLBUILD),                     00540002
+//           SPACE=(1024,(50,20,1)),DSNTYPE=LIBRARY,                    00550002
+//           DISP=(MOD,KEEP,KEEP)                                       00560002
+//*                                                                     00570001
+//SYSLIB DD DSN=CEE.SCEELKED,DISP=SHR                                   00580001
+//       DD DSN=KC02322.CSCI465.COPYLIB,DISP=SHR
+//*                                                                     00590001
+//SYSPRINT DD SYSOUT=*                                                  00600001
+//*
+//**********************************************************
+//*                                                        *
+//* JSTEP07     FUNDSALES  EXECUTE                         *
+//*                                                        *
+//**********************************************************
+//JSTEP07 EXEC PGM=FNDSALES,COND=(0,NE)                                 00620001
+//*                                                                     00630001
+//STEPLIB DD DSN=KC03F05.CSCI465.LOADLIB,DISP=SHR                       00640001
+//*                                                                     00650001
+//SALES DD DSN=KC02322.CSCI465.DATA7(SALES),DISP=SHR                    00660001
+//SORTED DD DSN=&&SORTED,DISP=SHR
+//*                                                                     00670001
+//RPRTOUT DD SYSOUT=*                                                   00680001
+                                                                        00700001
+                                                                        00710001
